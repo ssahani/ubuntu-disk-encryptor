@@ -17,8 +17,8 @@ INSTALL_SSH_SERVER=true
 GENERATE_SSH_KEYS=true
 
 # Get passwords from environment variables with fallback to defaults
-ROOT_PASSWORD="${ROOT_PASSWORD:-Arm@1234}"
-EC2_USER_PASSWORD="${EC2_USER_PASSWORD:-Arm@1234}"
+ROOT_PASSWORD="${ROOT_PASSWORD:-max}"
+EC2_USER_PASSWORD="${EC2_USER_PASSWORD:-max}"
 
 # Logging functions
 log_info() {
