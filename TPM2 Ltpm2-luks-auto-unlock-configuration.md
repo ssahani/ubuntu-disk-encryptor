@@ -37,7 +37,7 @@
 ## 📥 Installation
 
 ```bash
-curl -O https://example.com/tpm2-luks-config.sh
+curl -O https://github.com/ssahani/disk/blob/main/tpm-auto-decrypt-systemd.sh
 chmod +x tpm2-luks-config.sh
 sudo mv tpm2-luks-config.sh /usr/local/bin/
 ```
