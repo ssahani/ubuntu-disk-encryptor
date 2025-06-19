@@ -115,17 +115,3 @@ sudo cryptsetup open /dev/sda1 crypt_sda1 --key-file /etc/luks-keys/sda1.key
 
 MIT License – See `LICENSE` for details.
 
----
-
-## This README includes
-
-1. **Badges** – Visual indicators for version/compatibility  
-2. **Feature Highlights** – Quick visual overview  
-3. **Installation** – One-line install method  
-4. **Usage Examples** – Common scenarios  
-5. **Option Reference** – Complete parameter documentation  
-6. **Requirements** – Software prerequisites  
-7. **Recovery** – Emergency access instructions  
-8. **Security Notes** – Important operational considerations  
-
----
