@@ -1,4 +1,4 @@
-# TPM2-LUKS Manager
+# TPM2-LUKS tpm2-luks-setup
 
 ![Shell Script](https://img.shields.io/badge/Shell_Script-5.0-green.svg)
 ![TPM2](https://img.shields.io/badge/TPM2-2.0-blue.svg)
@@ -24,7 +24,7 @@ A robust Bash script for automating TPM2-bound LUKS encryption setup, including 
 ## Installation
 
 ```bash
-sudo curl -L https://raw.githubusercontent.com/yourrepo/tpm2-luks-manager/main/tpm2-luks-manager -o /usr/local/bin/tpm2-luks-manager
+sudo curl -L https://raw.githubusercontent.com/ssahani/disk/refs/heads/main/tpm2-luks-setup.sh -o /usr/local/bin/tpm2-luks-setup.sh 
 sudo chmod +x /usr/local/bin/tpm2-luks-manager
 ```
 
@@ -35,13 +35,13 @@ sudo chmod +x /usr/local/bin/tpm2-luks-manager
 ### Basic TPM2 binding for existing LUKS:
 
 ```bash
-sudo tpm2-luks-manager --device /dev/sda1 --pcrs 7
+sudo tpm2-luks-setup.sh --device /dev/sda1 --pcrs 7
 ```
 
 ### Full disk setup (partition + encrypt + TPM):
 
 ```bash
-sudo tpm2-luks-manager \
+sudo tpm2-luks-setup.sh  \
   --device /dev/sdb \
   --partition \
   --filesystem ext4 \
@@ -53,7 +53,7 @@ sudo tpm2-luks-manager \
 ### Remove TPM binding:
 
 ```bash
-sudo tpm2-luks-manager --device /dev/sda1 --remove
+sudo tpm2-luks-setup.sh --device /dev/sda1 --remove
 ```
 
 ---
