@@ -1,7 +1,7 @@
 # Ubuntu Disk Image Encryption Tool [encrypt-disk.sh](https://github.com/ssahani/disk/blob/main/enc.sh)
 
-![Security](https://img.shields.io/badge/Security-LUKS2-green) 
-![Compatibility](https://img.shields.io/badge/Compatibility-Ubuntu%2022.04+-blue)
+![Security](https://img.shields.io/badge/Security-LUKS2-green)  
+![Compatibility](https://img.shields.io/badge/Compatibility-Ubuntu%2022.04+-blue)  
 ![License](https://img.shields.io/badge/License-MIT-orange)
 
 ## Table of Contents
@@ -19,6 +19,7 @@
 ## Overview
 
 A robust Bash script that transforms unencrypted Ubuntu disk images into LUKS2-encrypted images while maintaining full boot capability. The tool automates:
+
 - Partition resizing (with 2GB root expansion by default)
 - LUKS2 encryption setup
 - Bootloader configuration
@@ -27,19 +28,22 @@ A robust Bash script that transforms unencrypted Ubuntu disk images into LUKS2-e
 ## Features
 
 ### Encryption & Security
+
 - **LUKS2 Encryption** with multiple cipher support
 - **Secure Key Management**:
   - 4096-byte cryptographically secure keys
   - Key stored in `/boot/root_crypt.key` with backup
-  - Strict file permissions (0400)
-- **Cipher Options**: aes-xts-plain64 (default), serpent, twofish, etc.
+  - Strict file permissions (`0400`)
+- **Cipher Options**: `aes-xts-plain64` (default), `serpent`, `twofish`, etc.
 
 ### Partition Management
+
 - **Automatic 2GB root partition expansion** (configurable)
 - **Proper Alignment**: 1MiB partition alignment with LUKS header reservation
 - **Filesystem Preservation**: Maintains original EFI/boot partitions
 
 ### Boot Process
+
 - **GRUB Integration**: Automatic configuration for encrypted boot
 - **Initramfs Updates**: Includes keyfile support
 - **Boot Partition Safety**: Clear warnings about unencrypted `/boot`
@@ -47,6 +51,7 @@ A robust Bash script that transforms unencrypted Ubuntu disk images into LUKS2-e
 ## Technical Implementation
 
 ### Partition Layout
+
 ```text
 [Alignment] [EFI] [Boot] [LUKS Header] [Encrypted Root] [Alignment]
 ```
@@ -61,12 +66,16 @@ graph TD
     F --> G[Encrypted Image]
 ```
 
-Usage Guide
-Basic Command
+## Usage Guide
 
+### Basic Command
+
+```bash
 ./encrypt_ubuntu_image.sh input.raw output.raw
+```
 
-Full Options
+### Full Options
+
 ```bash
 Options:
   -c CIPHER    Encryption cipher (default: aes-xts-plain64)
@@ -76,67 +85,62 @@ Options:
   -h           Show help
 ```
 
-Examples
+### Examples
 
-Default Encryption:
+**Default Encryption:**
 
 ```bash
 ./encrypt_ubuntu_image.sh ubuntu.raw encrypted.raw
 ```
 
-Custom Encryption:
+**Custom Encryption:**
 
 ```bash
 ./encrypt_ubuntu_image.sh -c serpent-xts-plain64 -k 512 -r 3 ubuntu.raw secure.raw
 ```
 
-Security Considerations
-Key Management
+## Security Considerations
 
-    Key stored in unencrypted /boot
+### Key Management
 
-    Local backup created (root_crypt.key.backup)
+- Key stored in unencrypted `/boot`
+- Local backup created (`root_crypt.key.backup`)
+- Never displayed/logged
 
-    Never displayed/logged
+### Boot Partition Warning
 
-Boot Partition Warning
+⚠️ `/boot` contains:
 
-⚠️ /boot contains:
+- Encryption key  
+- Kernel images  
+- GRUB config
 
-    Encryption key
+**Protection Recommendations:**
 
-    Kernel images
+- Implement Secure Boot
+- Physical security measures
+- Regular integrity checks
 
-    GRUB config
+## Requirements
 
-Protection Recommendations:
-
-    Implement Secure Boot
-
-    Physical security measures
-
-    Regular integrity checks
-
-Requirements
-System Dependencies
+### System Dependencies
 
 ```bash
 cryptsetup ≥ 2.0, parted ≥ 3.2, grub ≥ 2.0, rsync, jq, coreutils
 ```
-Image Requirements
 
-    Ubuntu 22.04+ disk image
+### Image Requirements
 
-    Standard partition layout:
+- Ubuntu 22.04+ disk image
+- Standard partition layout:
+  - EFI (FAT32)
+  - Boot (ext4)
+  - Root (ext4)
 
-        EFI (FAT32)
+## Output Files
 
-        Boot (ext4)
-
-        Root (ext4)
-
-Output Files
-File	Description	Location
-Encrypted Image	Bootable LUKS2 image	User-specified path
-Key Backup	Backup of encryption key	./root_crypt.key.backup
-Debug Log	Detailed operation log	./encrypt_debug.log
+| File              | Description              | Location                  |
+|-------------------|--------------------------|---------------------------|
+| Encrypted Image    | Bootable LUKS2 image     | User-specified path       |
+| Key Backup         | Backup of encryption key | `./root_crypt.key.backup` |
+| Debug Log          | Detailed operation log   | `./encrypt_debug.log`     |
