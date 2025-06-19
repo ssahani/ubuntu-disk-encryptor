@@ -118,32 +118,32 @@ Initramfs	Regenerated to include TPM2 modules
 Common Issues:
 
     TPM Device Not Found:
-    bash
+```bash
 
 sudo dmesg | grep -i tpm
 sudo systemctl status tpm2-abrmd
-
+```
 Binding Fails:
-bash
+```bash
 
 sudo cryptsetup luksDump /dev/sda1 | grep -i tpm
 sudo journalctl -xe
-
+```
 Boot Failures:
 
     Use recovery key to unlock
 
     Check logs:
-    bash
+   ``` bash
 
         sudo journalctl -b -p err
-
+```
 Log Files:
-
+```
     Script log: /tmp/tpm2-luks-config-*.log
 
     System logs: journalctl -xe
-
+```
 🔒 Security Considerations
 
     Always maintain a backup of your LUKS recovery key
