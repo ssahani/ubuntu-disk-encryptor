@@ -1,3 +1,4 @@
+
 # Ubuntu Image Customization [Script](https://github.com/ssahani/disk/blob/main/first-boot-config.sh)
 
 ## Overview
@@ -32,7 +33,8 @@ This script prepares a custom Ubuntu image with reliable first-boot configuratio
 sudo ./customize_image.sh --image /path/to/image.img
 ```
 
-Full Options
+### Full Options
+
 ```bash
 sudo ./customize_image.sh \
   --image /path/to/image.img \
@@ -43,155 +45,150 @@ sudo ./customize_image.sh \
   --no-sshkeys
 ```
 
-Environment Variables
-```bash
+### Environment Variables
 
+```bash
 export ROOT_PASSWORD="SecureRootPass123"
 export EC2_USER_PASSWORD="SecureUserPass123"
 sudo ./customize_image.sh --image /path/to/image.img
 ```
 
-Script Parameters
-Parameter	Description	Default Value
-```
---image	Path to the image file	ubuntu-2204-efi-kube-v1.30.1
---test	Verify configurations without making changes	false
---hostname	Set instance hostname	(none)
---sshkey	Path to SSH public key for ec2-user	(none)
---netplan	Custom Netplan configuration file	(none)
---no-ssh	Skip SSH server installation	false
---no-sshkeys	Skip SSH host key generation	false
---help or -h	Show help message	(none)
-```
+### Script Parameters
 
-```
-Environment Variables
-Variable	Description	Default Value
-ROOT_PASSWORD	Password for root user	max
-EC2_USER_PASSWORD	Password for ec2-user	max
-```
+| Parameter        | Description                                | Default Value                     |
+|------------------|--------------------------------------------|-----------------------------------|
+| `--image`        | Path to the image file                     | `ubuntu-2204-efi-kube-v1.30.1`    |
+| `--test`         | Verify configurations without making changes| `false`                           |
+| `--hostname`     | Set instance hostname                      | (none)                            |
+| `--sshkey`       | Path to SSH public key for ec2-user        | (none)                            |
+| `--netplan`      | Custom Netplan configuration file          | (none)                            |
+| `--no-ssh`       | Skip SSH server installation               | `false`                           |
+| `--no-sshkeys`   | Skip SSH host key generation               | `false`                           |
+| `--help` or `-h` | Show help message                          | (none)                            |
 
-First Boot Process
+### Environment Variables
+
+| Variable         | Description                                | Default Value                     |
+|------------------|--------------------------------------------|-----------------------------------|
+| `ROOT_PASSWORD`  | Password for root user                     | `max`                             |
+| `EC2_USER_PASSWORD` | Password for ec2-user                    | `max`                             |
+
+## First Boot Process
 
 The script creates a systemd service that runs on first boot and performs:
 
-    Network configuration (if provided)
-    System updates (apt-get update/upgrade)
-    User creation (ec2-user with sudo privileges)
-    SSH configuration (key installation and service setup)
-    Hostname setting (if provided)
-    Cleanup and marker creation to prevent re-execution
+- Network configuration (if provided)
+- System updates (`apt-get update/upgrade`)
+- User creation (ec2-user with sudo privileges)
+- SSH configuration (key installation and service setup)
+- Hostname setting (if provided)
+- Cleanup and marker creation to prevent re-execution
 
-The service creates a marker file (/var/lib/first-boot-complete) after successful execution to prevent running again.
+The service creates a marker file (`/var/lib/first-boot-complete`) after successful execution to prevent running again.
 
-Detailed Script Functions
-1. Image Mounting
+## Detailed Script Functions
 
-    Sets up loop device for the image
-    Mounts boot partition
-    Opens LUKS encrypted root partition
-    Mounts root filesystem and nested partitions (/boot, /boot/efi)
+1. **Image Mounting**
+   - Sets up loop device for the image
+   - Mounts boot partition
+   - Opens LUKS encrypted root partition
+   - Mounts root filesystem and nested partitions (`/boot`, `/boot/efi`)
 
-2. System Configuration
+2. **System Configuration**
+   - Resets machine-id for unique instance identification
+   - Sets root password
+   - Creates necessary directories
+   - Configures default Netplan if none provided
 
-    Resets machine-id for unique instance identification
-    Sets root password
-    Creates necessary directories
-    Configures default Netplan if none provided
+3. **SSH Setup**
 
-3. SSH Setup
+   Optionally:
+   - Installs OpenSSH server
+   - Configures password authentication
+   - Generates SSH host keys if missing
+   - Enables SSH service
 
-Optionally:
+4. **First-Boot Service Creation**
 
-    Installs OpenSSH server
-    Configures password authentication
-    Generates SSH host keys if missing
-    Enables SSH service
+   Creates a systemd service that:
+   - Runs only once (checks for marker file)
+   - Configures network if custom config provided
+   - Sets hostname if specified
+   - Creates ec2-user with SSH key if provided
+   - Performs system updates
+   - Configures SSH server
+   - Creates completion marker
 
-4. First-Boot Service Creation
+5. **Configuration File Handling**
 
-Creates a systemd service that:
+   Copies to `/boot` in the image:
+   - Hostname file (if specified)
+   - SSH public key (if provided)
+   - Netplan configuration (if provided)
+   - Cloud-init network disable config
 
-    Runs only once (checks for marker file)
-    Configures network if custom config provided
-    Sets hostname if specified
-    Creates ec2-user with SSH key if provided
-    Performs system updates
-    Configures SSH server
-    Creates completion marker
+6. **Error Handling**
 
-5. Configuration File Handling
+   The script includes comprehensive error handling:
+   - Input validation
+   - Mount point verification
+   - Cleanup on exit (unmounting, LUKS closure)
+   - Logging of all operations
+   - Exit on critical errors
 
-Copies to /boot in the image:
+7. **Logging**
 
-    Hostname file (if specified)
-    SSH public key (if provided)
-    Netplan configuration (if provided)
-    Cloud-init network disable config
-6. Error Handling
+   All first-boot operations are logged to:
+   - Systemd journal
+   - `/var/log/first-boot.log`
 
-The script includes comprehensive error handling:
+8. **Cleanup**
 
-    - Input validation
-    - Mount point verification
-    - Cleanup on exit (unmounting, LUKS closure)
-    - Logging of all operations
-    - Exit on critical errors
+   The script includes a cleanup function that:
+   - Unmounts all mounted partitions
+   - Closes LUKS container
+   - Detaches loop device
+   - Runs automatically on exit (success or failure)
 
-7. Logging
+9. **Example Configurations**
 
-All first-boot operations are logged to:
+   - **Basic DHCP Configuration**
 
-    Systemd journal
-    /var/log/first-boot.log
+     ```bash
+     sudo ./customize_image.sh --image base.img
+     ```
 
-8. Cleanup
+   - **Custom Network Configuration**
 
-The script includes a cleanup function that:
+     ```bash
+     sudo ./customize_image.sh \
+       --image base.img \
+       --netplan custom-netplan.yaml \
+       --hostname prod-web-01
+     ```
 
-    - Unmounts all mounted partitions
-    - Closes LUKS container
-    - Detaches loop device
-    - Runs automatically on exit (success or failure)
+   - **SSH Key Only Setup**
 
-9. Example Configurations
+     ```bash
+     sudo ./customize_image.sh \
+       --image base.img \
+       --sshkey ~/.ssh/id_rsa.pub \
+       --no-sshkeys
+     ```
 
-Basic DHCP Configuration
-```bash
-sudo ./customize_image.sh --image base.img
-```
+10. **Security Considerations**
 
-Custom Network Configuration
-```bash
-sudo ./customize_image.sh \
-  --image base.img \
-  --netplan custom-netplan.yaml \
-  --hostname prod-web-01
-```
-SSH Key Only Setup
-```bash
-sudo ./customize_image.sh \
-  --image base.img \
-  --sshkey ~/.ssh/id_rsa.pub \
-  --no-sshkeys
-```
+   - Passwords are set via environment variables (not command line)
+   - SSH password authentication can be disabled when using keys
+   - LUKS encryption is used for the root filesystem
+   - First-boot script includes secure defaults
+   - Sensitive operations require root privileges
 
-10. Security Considerations
+11. **Limitations**
 
-    - Passwords are set via environment variables (not command line
-    - SSH password authentication can be disabled when using keys
-    - LUKS encryption is used for the root filesystem
-    - First-boot script includes secure defaults
-    - Sensitive operations require root privileges
-
-11. Limitations
-
-    Designed specifically for Ubuntu 22.04 with LUKS encryption
-
-    Requires specific partition layout:
-
-        p1: EFI system partition
-        p2: /boot partition
-        p3: LUKS-encrypted root partition
-
-    Tested on x86_64 architecture
+   - Designed specifically for Ubuntu 22.04 with LUKS encryption
+   - Requires specific partition layout:
+     - `p1`: EFI system partition
+     - `p2`: `/boot` partition
+     - `p3`: LUKS-encrypted root partition
+   - Tested on x86_64 architecture
