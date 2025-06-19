@@ -1,8 +1,8 @@
 # TPM2 LUKS Auto-Unlock Configuration
 
-![TPM2 Security Chip](https://via.placeholder.com/150x50?text=TPM2+LUKS)  
+![TPM2 Security Chip](https://www.freedesktop.org/software/systemd/man/latest/systemd-cryptenroll.html)  
 *Automate LUKS decryption using TPM2 security chip*
-
+[tpm-auto-decrypt-systemd.sh](https://github.com/ssahani/disk/blob/main/tpm-auto-decrypt-systemd.sh)
 ## 📖 Table of Contents
 - [Features](#-features)
 - [Prerequisites](#-prerequisites)
