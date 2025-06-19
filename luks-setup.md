@@ -25,7 +25,7 @@ A robust Bash script for automating TPM2-bound LUKS encryption setup, including 
 
 ```bash
 sudo curl -L https://raw.githubusercontent.com/ssahani/disk/refs/heads/main/tpm2-luks-setup.sh -o /usr/local/bin/tpm2-luks-setup.sh 
-sudo chmod +x /usr/local/bin/tpm2-luks-manager
+sudo chmod +x /usr/local/bin/tpm2-luks-setup.sh
 ```
 
 ---
