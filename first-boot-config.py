@@ -1,8 +1,51 @@
 #!/usr/bin/env python3
 
 """
-First Boot Configuration Script
+First Boot Configuration Script (Python)
 
+Purpose:
+Automates the configuration of a custom Ubuntu image for first boot setup, including:
+- System initialization
+- Network configuration
+- User account setup
+- SSH configuration
+
+Key Features:
+1. Image Preparation:
+   - Mounts disk image partitions (including LUKS encrypted root)
+   - Sets root password from environment variable
+   - Configures basic system settings
+
+2. First-Boot Service:
+   - Creates a Python-based first-boot service that runs once on startup
+   - Handles network configuration (hostname, netplan)
+   - Performs system updates
+   - Configures SSH keys for ec2-user
+
+3. Configuration Options:
+   - Hostname setting
+   - Custom SSH public key installation
+   - Netplan network configuration
+   - SSH server control
+
+Usage:
+1. Set required environment variables:
+   export ROOT_PASSWORD="yourpassword"
+   export EC2_USER_PASSWORD="userpassword"
+
+2. Run with desired options:
+   sudo ./first-boot-config.py --image ubuntu.img --hostname myserver \
+     --sshkey ~/.ssh/id_rsa.pub --netplan config.yaml
+
+Output:
+- Console-only logging during configuration
+- Detailed log at /var/log/first-boot.log on target system
+- Color-coded status messages
+
+Security:
+- Cleans up all temporary mounts and devices
+- Uses environment variables for sensitive data
+- Generates fresh machine-id on first boot
 """
 
 import os
