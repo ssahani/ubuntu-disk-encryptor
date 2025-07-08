@@ -1,121 +1,105 @@
-# First Boot Configuration Script
+# First Boot Configuration System
 
-A modular Python script to configure Ubuntu disk images with selective first-boot settings.
+![System Architecture](https://mermaid.ink/svg/eyJjb2RlIjoiZ3JhcGggVERcbiAgICBBW1N0YXJ0XSAtLT4gQltNb3VudCBJbWFnZV1cbiAgICBCIC0tPiBDW0FwcGx5IENvbmZpZ3VyYXRpb25zXVxuICAgIEMgLS0-IERbQ3JlYXRlIEZpcnN0LUJvb3QgU2VydmljZV1cbiAgICBEIC0tPiBFW0NsZWFudXAgUmVzb3VyY2VzXVxuICAgIFxuICAgIHN1YmdyYXBoIENvbmZpZ3VyYXRpb24gT3B0aW9uc1xuICAgICAgICBDIC0tPiBGW1NldCBIb3N0bmFtZV1cbiAgICAgICAgQyAtLT4gR1tTZXQgUm9vdCBQYXNzd29yZF1cbiAgICAgICAgQyAtLT4gSFtDcmVhdGUgRUMyLVVzZXJdXG4gICAgICAgIEMgLS0-IElbSW5zdGFsbCBTU0ggS2V5XVxuICAgICAgICBDIC0tPiBKW0NvbmZpZ3VyZSBOZXRwbGFuXVxuICAgIGVuZFxuICAgIFxuICAgIHN1YmdyYXBoIEZpcnN0IEJvb3QgRXhlY3V0aW9uXG4gICAgICAgIEtbRmlyc3QgQm9vdF0gLS0-IExbQXBwbHkgSG9zdG5hbWVdXG4gICAgICAgIEsgLS0-IE1bTWFyayBDb21wbGV0ZV1cbiAgICBlbmRcbiAgICBcbiAgICBFIC0tPiBLIiwibWVybWFpZCI6eyJ0aGVtZSI6ImRlZmF1bHQiLCJmbG93Y2hhcnQiOnsiY3VydmUiOiJiYXNpcyJ9fSwidXBkYXRlRWRpdG9yIjpmYWxzZX0)
 
-## Features
+## Overview
 
-- **Selective Configuration**: Only applies requested changes
-- **Supported Configurations**:
-  - Hostname setting
-  - Root password configuration
-  - EC2-user creation with SSH key
-  - Custom Netplan installation
-- **Atomic Operations**: Each task is self-contained
-- **Clean Resource Management**: Proper mount/unmount handling
-- **First-Boot Service**: Completes configuration on first system start
+A modular system for pre-configuring Linux disk images with first-boot automation capabilities.
 
-## Requirements
+## Key Features
 
-- Python 3.6+
-- Linux system with:
-  - `losetup`
-  - `cryptsetup`
-  - `mount`/`umount`
-  - `chroot` capability
-- Root privileges
+- **Targeted Configuration** - Only modifies what you specify
+- **Secure Defaults** - Encrypted partitions, password policies
+- **Cloud-Ready** - EC2 user, SSH key, netplan support
+- **Two-Phase Execution**:
+  1. **Build-Time**: Static configuration injection
+  2. **First-Boot**: Runtime environment adaptation
 
 ## Installation
 
 ```bash
-chmod +x first-boot-config.py
-sudo cp first-boot-config.py /usr/local/bin/
+sudo curl -L https://raw.githubusercontent.com/ssahani/ubuntu-disk-encryptor/refs/heads/main/first-boot-setup.py -o /usr/local/bin/first-boot-config
+sudo chmod +x /usr/local/bin/first-boot-config
 ```
+
+## Configuration Matrix
+
+| Component       | Command Flag          | Config Location       | Runtime Action        |
+|----------------|----------------------|----------------------|----------------------|
+| Hostname       | `--hostname`         | `/boot/hostname`     | `hostnamectl set-hostname` |
+| Root Password  | `--root-pass`        | `/etc/shadow`        | (pre-set)            |
+| EC2 User       | `--ec2-user`         | `/etc/passwd`        | (pre-set)            |
+| SSH Key        | `--ssh-key`          | `/home/ec2-user/.ssh`| (pre-set)            |
+| Network        | `--netplan`          | `/etc/netplan`       | `netplan apply`      |
 
 ## Usage
 
+### Basic Example
+
 ```bash
-sudo ./first-boot-config.py [OPTIONS]
+sudo first-boot-config \
+  --image base.img \
+  --hostname web-01 \
+  --ec2-user \
+  --ssh-key ~/.ssh/web-key.pub
 ```
 
-### Basic Options
+### Complete Workflow
 
-| Option          | Description                          | Default               |
-|-----------------|--------------------------------------|-----------------------|
-| `--image`       | Disk image to configure              | `ubuntu-2204-efi-kube-v1.30.1` |
-| `--hostname`    | Set system hostname                  | (none)               |
-| `--root-pass`   | Set root password to 'max'           | Disabled             |
-| `--ec2-user`    | Create ec2-user with password 'max'  | Disabled             |
-| `--ssh-key`     | SSH public key for ec2-user          | (none)               |
-| `--netplan`     | Custom Netplan config file           | (none)               |
-| `--no-cleanup`  | Skip cleanup after configuration     | Cleanup enabled      |
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Script
+    participant Image
+    participant FirstBoot
+    
+    Admin->>Script: Execute with parameters
+    Script->>Image: Mount partitions
+    Script->>Image: Write configurations
+    Script->>Image: Install first-boot service
+    Script->>Image: Unmount and cleanup
+    Note right of Image: System boots for first time
+    Image->>FirstBoot: Execute service
+    FirstBoot->>Image: Apply hostname
+    FirstBoot->>Image: Mark complete
+```
 
-### Common Examples
+## Advanced Features
 
-1. **Set only hostname**:
-   ```bash
-   sudo ./first-boot-config.py --image ubuntu.img --hostname myserver
-   ```
+### Custom Hook System
 
-2. **Full configuration**:
-   ```bash
-   sudo ./first-boot-config.py \
-     --image ubuntu.img \
-     --hostname prod-server \
-     --root-pass \
-     --ec2-user \
-     --ssh-key ~/.ssh/id_rsa.pub \
-     --netplan 99-custom.yaml
-   ```
+Add custom scripts to `/boot/first-boot-hooks/` that will execute in alphabetical order during first boot.
 
-3. **Debug mode (no cleanup)**:
-   ```bash
-   sudo ./first-boot-config.py --image ubuntu.img --hostname test --no-cleanup
-   ```
+### Debug Mode
 
-## Configuration Workflow
+```bash
+sudo first-boot-config --image debug.img --no-cleanup --verbose
+```
 
-1. Mounts the disk image
-2. Applies requested configurations:
-   - Writes hostname to `/boot/hostname`
-   - Sets passwords in `/etc/shadow`
-   - Installs SSH keys
-   - Copies Netplan configs
-3. Creates first-boot service
-4. Unmounts and cleans up (unless disabled)
-
-The first-boot service completes these tasks on first system startup:
-- Applies the hostname using `hostnamectl`
-- Creates completion marker file
-
-## Technical Details
-
-- **Image Requirements**:
-  - Must have LUKS-encrypted root partition
-  - Requires `/boot/root_crypt.key` for decryption
-- **Password Security**:
-  - Both root and ec2-user are set to password 'max'
-  - Consider changing after first login
-- **Netplan**:
-  - Existing Netplan configs are removed
-  - Custom config installed as `/etc/netplan/99-custom.yaml`
+Maintains mounts for inspection:
+- `/mnt/boot` - Boot partition
+- `/mnt/root` - Root filesystem
 
 ## Troubleshooting
 
-**Error: "Missing LUKS keyfile"**
-- Ensure your image has `/boot/root_crypt.key`
+### Common Issues
 
-**Error: Mount failures**
-- Try with `--no-cleanup` and manually check mounts:
-  ```bash
-  mount | grep /mnt
-  ```
+1. **Mount Failures**:
+   ```bash
+   sudo losetup -a  # Check loop devices
+   sudo dmesg | grep crypt  # Check encryption
+   ```
 
-**Debugging first-boot**:
-- Check journal logs:
-  ```bash
-  journalctl -u first-boot-config
-  ```
+2. **First-Boot Debugging**:
+   ```bash
+   journalctl -u first-boot-config -b
+   ```
+
+3. **Password Issues**:
+   ```bash
+   chroot /mnt/root passwd root  # Reset manually
+   ```
 
 ## License
 
-MIT License - Free for modification and redistribution
+Apache 2.0 - See [LICENSE](LICENSE) for details.
