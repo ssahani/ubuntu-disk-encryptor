@@ -1,151 +1,90 @@
-# TPM2 LUKS Auto-Unlock Configuration
+# Ubuntu Disk Encryptor with TPM Auto-Decrypt
 
-![TPM2 Security Chip](https://www.freedesktop.org/software/systemd/man/latest/systemd-cryptenroll.html)  
-*Automate LUKS decryption using TPM2 security chip*
-[tpm-auto-decrypt-systemd.sh](https://github.com/ssahani/disk/blob/main/tpm-auto-decrypt-systemd.sh)## 📖 Table of Contents
+This project provides a script to enable automatic decryption of an encrypted Ubuntu root partition using a Trusted Platform Module (TPM) during boot.
 
-    [Features](#-features)
-    [Prerequisites](#-prerequisites)
-    [Installation](#-installation)
-    [Usage](#-usage)
-    [Configuration Options](#-configuration-options)
-    [PCR Selection Guide](#-pcr-selection-guide)
-    [Operation Details](#-operation-details)
-    [Troubleshooting](#-troubleshooting)
-    [Security Considerations](#-security-considerations)
-    [License](#-license)
+## Overview
 
-## ✨ Features
+The `tpm-auto-decrypt-systemd.sh` script automates the process of:
+1. Configuring your Ubuntu system to use TPM for automatic disk decryption
+2. Setting up the necessary systemd services
+3. Integrating with the initramfs for early boot decryption
 
-    🔒 Automatic LUKS decryption during boot using TPM2
-    📝 Comprehensive logging of all operations
-    ⏮️ Configuration file backups before modifications
-    🔍 Pre-operation system validation checks
-    🎨 Color-coded status output
-    📦 Automatic dependency installation
-    🔄 Support for both setup and removal operations
-    🧩 Flexible PCR configurations
+This eliminates the need to manually enter a passphrase during boot while maintaining strong encryption security.
 
-## 🧰 Prerequisites
+## Requirements
 
-    Linux system with UEFI Secure Boot
-    TPM2.0 chip enabled in BIOS
-    LUKS-encrypted partition
-    Systemd ≥ 247 (Ubuntu 20.04+ recommended)
-    Root privileges
+- Ubuntu 20.04 or later (tested on 22.04 LTS)
+- A system with TPM 2.0 chip
+- Encrypted root partition using LUKS
+- Root access
 
-## 📥 Installation
+## Workflow Diagram
 
-```bash
-
-curl -O https://github.com/ssahani/disk/blob/main/tpm-auto-decrypt-systemd.sh
-chmod +x tpm2-luks-config.sh
-sudo mv tpm2-luks-config.sh /usr/local/bin/
+```mermaid
+graph TD
+    A[System Boot] --> B[TPM Checks System Integrity]
+    B --> C{Integrity Verified?}
+    C -->|Yes| D[TPM Releases LUKS Key]
+    C -->|No| E[Fallback to Manual Passphrase Entry]
+    D --> F[System Continues Booting]
+    E --> F
 ```
 
-🚀 Usage
-Basic Setup (default PCR7)
-```bash
-sudo tpm2-luks-config.sh --device /dev/sda1
-```
+## Installation
 
-Custom PCR Configuration
-```bash
-sudo tpm2-luks-config.sh --device /dev/nvme0n1p3 --pcrs 0,4,7
-```
-Remove TPM2 Binding
-```bash
-sudo tpm2-luks-config.sh --device /dev/sda1 --remove
-```
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/ssahani/ubuntu-disk-encryptor.git
+   cd ubuntu-disk-encryptor
+   ```
 
-⚙️ Configuration Options
-Option	Description	Default
---device	LUKS encrypted device (required)	-
---pcrs	PCR banks to use (comma-separated)	7
---remove	Remove TPM2 binding	false
---force	Skip confirmation prompts	false
---help	Show help message	-
-🔬 PCR Selection Guide
-PCR	Measurement	Recommended
-0	Core system firmware executable code	✅
-4	Boot Manager	✅
-7	Secure Boot state	✅✅
-2	Extended PCR	⚠️ Special casesRecommendation: Start with PCR7 only for Secure Boot systems. Combine with PCR0/PCR4 for stricter policies.
-🔧 Operation Details
-What the Script Does:Validation Phase:
+2. Make the script executable:
+   ```bash
+   chmod +x tpm-auto-decrypt-systemd.sh
+   ```
 
-    Verifies TPM2 chip is present and accessible
+3. Run the script as root:
+   ```bash
+   sudo ./tpm-auto-decrypt-systemd.sh
+   ```
 
-    Checks LUKS partition validity
+## Usage
 
-    Ensures system requirements are met
+After installation, the system will automatically attempt to decrypt the disk using the TPM during boot. If the TPM verification fails (due to system changes or tampering), it will fall back to manual passphrase entry.
 
-Backup Phase:
+## Verification
 
-    Creates backups of:
+To verify the TPM decryption is working:
+1. Reboot your system
+2. Observe that the system boots without prompting for a disk encryption passphrase
+3. Check the status of the systemd service:
+   ```bash
+   systemctl status tpm-auto-decrypt
+   ```
 
-        /etc/crypttab
+## Security Considerations
 
-        /etc/fstab
+- The TPM will only release the decryption key if the system integrity is verified
+- Any significant hardware or firmware changes may cause the TPM to withhold the key
+- Always keep a backup of your recovery passphrase in case TPM decryption fails
 
-        /etc/default/grub
+## Troubleshooting
 
-    Stores in /etc/backups with timestamp
+If automatic decryption fails:
+1. The system will fall back to manual passphrase entry
+2. Check system logs with:
+   ```bash
+   journalctl -u tpm-auto-decrypt
+   ```
+3. Verify TPM is detected:
+   ```bash
+   sudo tpm2_pcrread
+   ```
 
-Configuration Phase:
+## License
 
-    Adds/removes TPM2 key slot
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-    Updates crypttab with proper options
+## Contributing
 
-    Regenerates initramfs
-
-Verification Phase:
-
-    Displays final configuration
-
-    Provides next stepsFile Modifications:
-File	Modification
-/etc/crypttab	Adds/updates LUKS entry with TPM2 options
-Initramfs	Regenerated to include TPM2 modules
-🐛 Troubleshooting
-Common Issues:TPM Device Not Found:
-```bash
-
-sudo dmesg | grep -i tpm
-sudo systemctl status tpm2-abrmd
-```
-Binding Fails:
-```bash
-sudo cryptsetup luksDump /dev/sda1 | grep -i tpm
-sudo journalctl -xe
-```
-
-Boot Failures:Use recovery key to unlock
-
-Check logs:
-```bash
-
-     sudo journalctl -b -p err
-```
-Log Files:
-
-    Script log: /tmp/tpm2-luks-config-*.log
-
-    System logs: journalctl -xe
-
-🔒 Security ConsiderationsAlways maintain a backup of your LUKS recovery key
-
-TPM binding is not a replacement for strong passphrases
-
-PCR changes (like BIOS updates) may prevent unlocking
-
-Regularly test recovery process
-
-Consider combining with:
-
-    Secure Boot
-
-    BIOS password
-
-    Encrypted /boot partition📜 LicenseMIT License - Free for personal and commercial use please fix the format in md format give all thsse
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
