@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Selective First Boot Configuration Script
-
-Features:
-- Only applies requested configurations
-- Clean separation of concerns
-- Minimal dependencies
-- Atomic operations
-- Proper error handling
-"""
-
 import os
 import sys
 import subprocess
