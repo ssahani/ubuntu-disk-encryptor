@@ -1,113 +1,164 @@
-# 🔐 encrypt\_ubuntu\_image.sh – Ubuntu Full Disk Encryption Tool (LUKS2)
+# Ubuntu Disk Encryptor 🔒
 
-## Description
+![LUKS Encryption](https://img.shields.io/badge/Encryption-LUKS2-blue)
+![Ubuntu Support](https://img.shields.io/badge/Ubuntu-20.04|22.04-orange)
+![License](https://img.shields.io/badge/License-Apache_2.0-blue)
 
-`encrypt_ubuntu_image.sh` is a robust Bash script that converts an **unencrypted Ubuntu raw disk image** into a **LUKS2-encrypted image**, preserving EFI and `/boot` partitions while encrypting the root (`/`) filesystem. Ideal for bare metal provisioning, secure edge deployments, and cloud image customization.
+A robust tool for automating LUKS full-disk encryption on Ubuntu cloud images, specifically designed for Kubernetes deployments.
 
----
+## Features ✨
 
-## 🛠️ Features
+- **Full Disk Encryption**: LUKS2 encryption for root filesystem
+- **Cloud-Init Integration**: Preserves cloud-init functionality
+- **Secure Boot Compatibility**: Maintains bootloader chain
+- **Key Management**: Flexible keyfile/passphrase options
+- **Automated Partitioning**: Handles partition table modifications
+- **Tinkerbell Ready**: Produces images compatible with Tinkerbell workflows
 
-* 📂 **Preserves original partitions**: EFI and `/boot` untouched
-* 🔐 **Encrypts root partition** with **LUKS2**
-* 🔑 **Auto-generates key file** stored in `/boot/root_crypt.key`
-* 🖫️ **Key backup** saved as `./root_crypt.key.backup`
-* 📊 **Extensible and modular**: clean, traceable code with verbose logging
-* ⚙️ **GRUB + initramfs** configured for bootable encryption
-* 📊 **Increases root partition size by default (2GB)**
-* 📋 **Extensive logging** to `encrypt_debug.log`
+## Prerequisites 🛠️
 
----
+- Ubuntu 20.04/22.04 raw image
+- `cryptsetup` package
+- `qemu-utils` for image manipulation
+- Minimum 2GB free disk space
 
-## 🧪 Requirements
-
-Ensure the following tools are installed:
-
-```bash
-jq qemu-img cryptsetup partx blkid parted grub-install rsync losetup mkfs.ext4 mkfs.vfat awk
-```
-
----
-
-## 🗽 Usage
+## Installation 📥
 
 ```bash
-./encrypt_ubuntu_image.sh [OPTIONS] <input_image.raw> <output_image.raw>
+git clone https://github.com/ssahani/ubuntu-disk-encryptor.git
+cd ubuntu-disk-encryptor
+chmod +x encrypt-ubuntu-image.sh
 ```
 
-### Required Arguments:
+## Usage 🚀
 
-* `input_image.raw`: Path to original unencrypted Ubuntu raw disk image
-* `output_image.raw`: Output path for new encrypted image
-
-### Options:
-
-| Option      | Description                                     | Default           |
-| ----------- | ----------------------------------------------- | ----------------- |
-| `-c CIPHER` | Set LUKS cipher (e.g. `aes-xts-plain64`)        | `aes-xts-plain64` |
-| `-k BITS`   | Set key size in bits                            | `512`             |
-| `-r GB`     | Additional size (in GB) added to root partition | `2`               |
-| `-d`        | Enable debug logging (live + file)              | Off               |
-| `-h`        | Show help and exit                              | —                 |
-
----
-
-## 📆 Example Commands
-
-1. **Basic usage**:
-
+### Basic Encryption
 ```bash
-./encrypt_ubuntu_image.sh ubuntu.raw ubuntu-encrypted.raw
+./encrypt-ubuntu-image.sh \
+  -i ubuntu-22.04-server-cloudimg-amd64.img \
+  -o ubuntu-22.04-encrypted.img \
+  -k /path/to/keyfile
 ```
 
-2. **Custom cipher and key size**:
-
+### Advanced Options
 ```bash
-./encrypt_ubuntu_image.sh -c serpent-xts-plain64 -k 512 ubuntu.raw secure.raw
+./encrypt-ubuntu-image.sh \
+  -i input.img \
+  -o encrypted.img \
+  -k /path/to/keyfile \
+  --cipher aes-xts-plain64 \
+  --hash sha512 \
+  --iter-time 5000 \
+  --luks-version luks2
 ```
 
-3. **Debug mode and 4GB root increase**:
+## Workflow Diagram 🔄
 
-```bash
-./encrypt_ubuntu_image.sh -d -r 4 ubuntu.raw ubuntu-secure.raw
+```mermaid
+graph LR
+    A[Input Image] --> B[Create Boot Partition]
+    B --> C[Create LUKS Partition]
+    C --> D[Generate Keyfile]
+    D --> E[Format LUKS Container]
+    E --> F[Configure crypttab]
+    F --> G[Update initramfs]
+    G --> H[Output Encrypted Image]
 ```
 
----
+## Parameters ⚙️
 
-## 🔐 Security Warning
+| Option            | Description                          | Default Value         |
+|-------------------|--------------------------------------|-----------------------|
+| `-i`              | Input image path                    | (required)            |
+| `-o`              | Output image path                   | (required)            |
+| `-k`              | Keyfile path                        | (required)            |
+| `--boot-size`     | Boot partition size (MB)            | `512`                 |
+| `--cipher`        | Encryption cipher                   | `aes-xts-plain64`     |
+| `--hash`          | Hash algorithm                      | `sha512`              |
+| `--iter-time`     | PBKDF iteration time (ms)           | `5000`                |
+| `--luks-version`  | LUKS format version                 | `luks2`               |
+| `--no-cloud-init` | Disable cloud-init preservation     | `false`               |
 
-The `/boot` partition is **unencrypted** and contains:
+## Technical Implementation Details �
 
-* `root_crypt.key` (used to unlock the encrypted root)
-* Kernel and initramfs
-* GRUB configuration
+### Partition Layout
+```
+/dev/sda1 - Boot partition (unencrypted ext4)
+/dev/sda2 - LUKS container (encrypted root)
+```
 
-**Secure Boot** or physical disk protection is **strongly recommended**.
+### Key Components
+1. **Partition Table Modification**:
+   ```bash
+   sgdisk -n 1:0:+512M -t 1:8300 -n 2:0:0 -t 2:8309 ${device}
+   ```
 
----
+2. **LUKS Formatting**:
+   ```bash
+   cryptsetup luksFormat --type luks2 \
+     --cipher ${cipher} \
+     --hash ${hash} \
+     --iter-time ${iter_time} \
+     --key-file ${keyfile} ${root_part}
+   ```
 
-## 📁 Output Artifacts
+3. **Filesystem Setup**:
+   ```bash
+   mkfs.ext4 -L boot /dev/sda1
+   cryptsetup open ${root_part} cryptroot
+   mkfs.ext4 -L root /dev/mapper/cryptroot
+   ```
 
-* `encrypted_ubuntu.raw`: Final LUKS2-encrypted image
-* `root_crypt.key.backup`: Local backup of encryption key
-* `encrypt_debug.log`: Detailed log of all operations
+## Integration with Tinkerbell 🔗
 
----
+The produced images work seamlessly with the [encrypted writefile action](https://github.com/ssahani/actions/tree/main/writefile):
 
-## 📌 Changelog
+```yaml
+actions:
+  - name: write-netplan
+    image: quay.io/ssahani/writefile:latest
+    environment:
+      DEST_DISK: /dev/sda2
+      BOOT_DISK: /dev/sda1
+      DEST_PATH: /etc/netplan/config.yaml
+      CONTENTS: |
+        network:
+          version: 2
+          ethernets:
+            eth0:
+              dhcp4: true
+```
 
-* **v2.2.0**:
+## Security Considerations 🔐
 
-  * Default root resize increased to 2GB
-  * Full `/etc/fstab` and `/etc/crypttab` updates
-  * Auto detection of kernel version for `initramfs`
-  * Keyfile verification in `initrd.img`
-  * Enhanced GRUB and cryptsetup integration
+- **Keyfile Security**: Always store keyfiles securely
+- **TPM Integration**: Consider adding TPM2 binding for production
+- **Secure Erase**: Original images should be securely wiped after encryption
+- **Audit**: Regularly audit encryption parameters
 
----
+## Troubleshooting 🐛
 
-## 🩺 Cleanup
+### Error: "Device or resource busy"
+- Ensure no processes are using the image:
+  ```bash
+  sudo losetup -D
+  sudo kpartx -d /dev/loopX
+  ```
 
-All temporary mounts and devices are automatically cleaned on script exit.
+### Error: "Failed to open LUKS device"
+- Verify keyfile is correct:
+  ```bash
+  cryptsetup luksDump /dev/sda2 | grep -i slots
+  ```
 
----
+## Contributing 🤝
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Commit your changes (`git commit -am 'Add some fooBar'`)
+4. Push to the branch (`git push origin feature/fooBar`)
+5. Create a new Pull Request
+
+## License 📄
+
+Apache 2.0 - See [LICENSE](LICENSE) for details.
