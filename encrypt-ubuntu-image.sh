@@ -22,7 +22,7 @@ Features:
   - Generates secure random key stored in /boot
   - Maintains bootability with GRUB updates
   - Preserves original partition structure
-  - Automatically increases root partition by 2GB
+  - Automatically increases root partition size
   - Comprehensive logging and debugging
 
 Usage:
@@ -37,8 +37,8 @@ Options:
                  Recommended alternatives: aes-cbc-essiv:sha256, serpent-xts-plain64
   -k KEY_SIZE    Key size in bits (default: 512)
                  Common values: 128, 192, 256, 384, 512
-  -d             Enable debug output (verbose logging)
   -r ROOT_RESIZE Additional space for root partition in GB (default: 2)
+  -d             Enable debug output (verbose logging)
   -h, --help     Show this help message
 
 Key Management:
@@ -57,11 +57,11 @@ Examples:
   1. Basic usage with defaults (2GB root expansion):
      ${0##*/} ubuntu.raw encrypted_ubuntu.raw
 
-  2. Custom cipher and key size:
-     ${0##*/} -c serpent-xts-plain64 -k 512 ubuntu.raw encrypted_ubuntu.raw
+  2. Custom cipher and key size with 4GB root expansion:
+     ${0##*/} -c serpent-xts-plain64 -k 512 -r 4 ubuntu.raw encrypted_ubuntu.raw
 
-  3. With debug output and 4GB root expansion:
-     ${0##*/} -d -r 4 ubuntu.raw encrypted_ubuntu.raw
+  3. With debug output and 1GB root expansion:
+     ${0##*/} -d -r 1 ubuntu.raw encrypted_ubuntu.raw
 
 Exit Codes:
   0 - Success
@@ -88,7 +88,7 @@ SECTOR_SIZE=512
 ALIGNMENT=$((1 * 1024 * 1024))  # 1 MiB alignment
 DEFAULT_CIPHER="aes-xts-plain64"
 DEFAULT_KEY_SIZE=512
-DEFAULT_ROOT_RESIZE=2  # Default root expansion in GB (increased from 1GB to 2GB)
+DEFAULT_ROOT_RESIZE=2  # Default root expansion in GB
 DEBUG_LOG="./encrypt_debug.log"
 
 # === LOGGING SYSTEM ===
@@ -200,7 +200,7 @@ calculate_sizes() {
     BOOT_SIZE=$(sudo blockdev --getsize64 "${LOOP_INPUT}p2")
     ROOT_SIZE=$(sudo blockdev --getsize64 "${LOOP_INPUT}p3")
     
-    # Apply root resize (now defaults to 2GB)
+    # Apply root resize (user specified or default 2GB)
     ROOT_SIZE=$((ROOT_SIZE + ROOT_RESIZE * 1024 * 1024 * 1024))
     
     # Align sizes to 1MiB
@@ -231,7 +231,7 @@ calculate_sizes() {
 create_encrypted_image() {
     log "Creating encrypted disk image..."
     
-    # Create blank image with 2GB additional space for root
+    # Create blank image with additional space for root
     qemu-img create -f raw "$ENCRYPTED_RAW" "$TOTAL_SIZE" || {
         error "Failed to create output image" 5
     }
@@ -485,7 +485,7 @@ trap cleanup EXIT
 # Parse arguments
 LUKS_CIPHER="$DEFAULT_CIPHER"
 LUKS_KEY_SIZE="$DEFAULT_KEY_SIZE"
-ROOT_RESIZE="$DEFAULT_ROOT_RESIZE"  # Now defaults to 2GB
+ROOT_RESIZE="$DEFAULT_ROOT_RESIZE"
 DEBUG=""
 
 while getopts ":c:k:r:dh" opt; do
@@ -529,7 +529,7 @@ sudo partx -u "$LOOP_INPUT" || error "Failed to update partition table" 5
 # Validate input image structure
 validate_input_image
 
-# Calculate partition sizes (now with 2GB default increase)
+# Calculate partition sizes with user-specified root expansion
 calculate_sizes
 
 # Create and partition output image
@@ -548,6 +548,8 @@ cleanup
 log "Encryption process completed successfully"
 log "Output image: $ENCRYPTED_RAW"
 log "Key backup: $BACKUP_KEYFILE"
+log "Root partition expanded by: ${ROOT_RESIZE}GB"
 log "Debug log: $DEBUG_LOG"
 echo -e "${YELLOW}WARNING: The encryption key is stored in unencrypted /boot partition."
 echo -e "Ensure physical security or use Secure Boot to protect this key.${NC}"
+
